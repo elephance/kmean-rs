@@ -1,7 +1,6 @@
 use crate::memory::SupportedSimdArray;
 use crate::{DistanceFunction, Primitive};
-use std::simd::num::SimdFloat;
-use std::simd::{LaneCount, Simd, SupportedLaneCount};
+use std::simd::{LaneCount, Simd, SimdFloat, SupportedLaneCount};
 
 pub struct EuclideanDistance;
 
