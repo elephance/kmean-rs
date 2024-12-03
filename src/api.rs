@@ -190,6 +190,17 @@ where
         }
     }
 
+    pub fn new_from_slice(samples_slice: &[T], sample_cnt: usize, sample_dims: usize, distance_fn: D) -> Self {
+        assert!(samples_slice.len() == sample_cnt * sample_dims);
+
+        Self {
+            sample_cnt,
+            sample_dims,
+            p_samples: StrideBuffer::from_slice::<LANES>(sample_dims, samples_slice),
+            distance_fn,
+        }
+    }
+
     pub(crate) fn update_centroid_distances(&self, state: &mut KMeansState<T>) {
         let centroids = &state.centroids;
 

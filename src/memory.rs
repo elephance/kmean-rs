@@ -2,8 +2,7 @@ use crate::helpers;
 use core::fmt;
 use rand::distributions::uniform::SampleUniform;
 use std::ops::{Index, IndexMut};
-use std::simd::num::SimdFloat;
-use std::simd::{LaneCount, Simd, SimdElement, SupportedLaneCount};
+use std::simd::{LaneCount, Simd, SimdElement, SimdFloat, SupportedLaneCount};
 use std::{iter, ops};
 
 pub trait Primitive:
