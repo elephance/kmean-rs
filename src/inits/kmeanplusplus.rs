@@ -17,7 +17,18 @@ where
     {
         // Randomly select first centroid
         let first_idx = config.rnd.borrow_mut().gen_range(0..kmean.sample_cnt);
-        state.centroids.set_nth_from_iter(0, kmean.p_samples[first_idx].iter().cloned());
+        state.centroids.set_nth_from_iter(
+            0,
+            kmean
+                .p_samples
+                .iter()
+                .map(|x| x.iter())
+                .flatten()
+                .nth(first_idx)
+                .unwrap()
+                .iter()
+                .cloned(),
+        );
     }
     for k in 1..state.k {
         // For each following centroid...
@@ -33,9 +44,18 @@ where
         // Use rand's WeightedIndex to randomly draw a centroid, while respecting their probabilities
         let centroid_index = WeightedIndex::new(centroid_probabilities).unwrap();
         let sampled_centroid_id = centroid_index.sample(config.rnd.borrow_mut().deref_mut());
-        state
-            .centroids
-            .set_nth_from_iter(k, kmean.p_samples[sampled_centroid_id].iter().cloned());
+        state.centroids.set_nth_from_iter(
+            0,
+            kmean
+                .p_samples
+                .iter()
+                .map(|x| x.iter())
+                .flatten()
+                .nth(sampled_centroid_id)
+                .unwrap()
+                .iter()
+                .cloned(),
+        );
     }
 }
 

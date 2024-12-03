@@ -163,7 +163,7 @@ where
 {
     pub(crate) sample_cnt: usize,
     pub(crate) sample_dims: usize,
-    pub(crate) p_samples: StrideBuffer<T>,
+    pub(crate) p_samples: Vec<StrideBuffer<T>>,
     pub(crate) distance_fn: D,
 }
 impl<T, const LANES: usize, D: DistanceFunction<T, LANES>> KMeans<T, LANES, D>
@@ -185,7 +185,7 @@ where
         Self {
             sample_cnt,
             sample_dims,
-            p_samples: StrideBuffer::from_slice::<LANES>(sample_dims, samples),
+            p_samples: vec![StrideBuffer::from_slice::<LANES>(sample_dims, &samples)],
             distance_fn,
         }
     }
@@ -196,7 +196,19 @@ where
         Self {
             sample_cnt,
             sample_dims,
-            p_samples: StrideBuffer::from_slice::<LANES>(sample_dims, samples_slice),
+            p_samples: vec![StrideBuffer::from_slice::<LANES>(sample_dims, samples_slice)],
+            distance_fn,
+        }
+    }
+
+    pub fn new_from_slices(samples_slices: &[&[T]], sample_cnt: usize, sample_dims: usize, distance_fn: D) -> Self {
+        Self {
+            sample_cnt,
+            sample_dims,
+            p_samples: samples_slices
+                .iter()
+                .map(|s| StrideBuffer::from_slice::<LANES>(sample_dims, s))
+                .collect(),
             distance_fn,
         }
     }
@@ -205,16 +217,17 @@ where
         let centroids = &state.centroids;
 
         // manually calculate work-packet size, because rayon does not do static scheduling (which is more apropriate here)
-        let work_packet_size = self.p_samples.bfr.len() / self.p_samples.stride / rayon::current_num_threads();
-        self.p_samples
-            .bfr
-            .par_chunks_exact(self.p_samples.stride)
-            .with_min_len(work_packet_size)
-            .zip(state.assignments.par_iter().cloned())
-            .zip(state.centroid_distances.par_iter_mut())
-            .for_each(|((s, assignment), centroid_dist)| {
-                *centroid_dist = self.distance_fn.distance(s, centroids.nth_stride(assignment));
-            });
+        let work_packet_size = self.p_samples.iter().fold(0, |acc, sb| acc + sb.bfr.len() / sb.stride) / rayon::current_num_threads();
+        self.p_samples.iter().for_each(|sb| {
+            sb.bfr
+                .par_chunks_exact(sb.stride)
+                .with_min_len(work_packet_size)
+                .zip(state.assignments.par_iter().cloned())
+                .zip(state.centroid_distances.par_iter_mut())
+                .for_each(|((s, assignment), centroid_dist)| {
+                    *centroid_dist = self.distance_fn.distance(s, centroids.nth_stride(assignment));
+                });
+        })
     }
 
     pub(crate) fn update_cluster_assignments(&self, state: &mut KMeansState<T>, limit_k: Option<usize>) {
@@ -222,24 +235,25 @@ where
         let k = limit_k.unwrap_or(state.k);
 
         // manually calculate work-packet size, because rayon does not do static scheduling (which is more apropriate here)
-        let work_packet_size = self.p_samples.bfr.len() / self.p_samples.stride / rayon::current_num_threads();
-        self.p_samples
-            .bfr
-            .par_chunks_exact(self.p_samples.stride)
-            .with_min_len(work_packet_size)
-            .zip(state.assignments.par_iter_mut())
-            .zip(state.centroid_distances.par_iter_mut())
-            .for_each(|((s, assignment), centroid_dist)| {
-                let (best_idx, best_dist) = centroids
-                    .chunks_exact_stride()
-                    .take(k)
-                    .map(|c| self.distance_fn.distance(s, c))
-                    .enumerate()
-                    .min_by(|(_, d0), (_, d1)| d0.partial_cmp(d1).unwrap())
-                    .unwrap();
-                *assignment = best_idx;
-                *centroid_dist = best_dist;
-            });
+        let work_packet_size = self.p_samples.iter().fold(0, |acc, sb| acc + sb.bfr.len() / sb.stride) / rayon::current_num_threads();
+        self.p_samples.iter().for_each(|sb| {
+            sb.bfr
+                .par_chunks_exact(sb.stride)
+                .with_min_len(work_packet_size)
+                .zip(state.assignments.par_iter_mut())
+                .zip(state.centroid_distances.par_iter_mut())
+                .for_each(|((s, assignment), centroid_dist)| {
+                    let (best_idx, best_dist) = centroids
+                        .chunks_exact_stride()
+                        .take(k)
+                        .map(|c| self.distance_fn.distance(s, c))
+                        .enumerate()
+                        .min_by(|(_, d0), (_, d1)| d0.partial_cmp(d1).unwrap())
+                        .unwrap();
+                    *assignment = best_idx;
+                    *centroid_dist = best_dist;
+                });
+        });
     }
 
     pub(crate) fn update_cluster_frequencies(&self, assignments: &[usize], centroid_frequency: &mut [usize]) -> usize {
@@ -324,6 +338,7 @@ where
     /// println!("Cluster-Assignments: {:?}", result.assignments);
     /// println!("Error: {}", result.distsum);
     /// ```
+    /*
     pub fn kmeans_minibatch<F>(&self, batch_size: usize, k: usize, max_iter: usize, init: F, config: &KMeansConfig<'_, T>) -> KMeansState<T>
     where
         for<'c> F: FnOnce(&KMeans<T, LANES, D>, &mut KMeansState<T>, &KMeansConfig<'c, T>),
@@ -333,6 +348,7 @@ where
     {
         crate::variants::Minibatch::calculate(self, batch_size, k, max_iter, init, config)
     }
+    */
 
     /// K-Means++ initialization method, as implemented in Matlab
     ///

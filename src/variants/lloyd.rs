@@ -1,6 +1,7 @@
 use crate::api::DistanceFunction;
 use crate::memory::*;
 use crate::{KMeans, KMeansConfig, KMeansState};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::simd::{LaneCount, Simd, SupportedLaneCount};
 
 pub(crate) struct Lloyd<T, const LANES: usize, D>
@@ -33,20 +34,21 @@ where
                 used_centroids_cnt = data.update_cluster_frequencies(assignments, centroid_frequency);
             });
             s.spawn(|_| {
-                data.p_samples
-                    .chunks_exact_stride()
-                    .zip(assignments.iter().cloned())
-                    .for_each(|(s, centroid_id)| {
-                        new_centroids
-                            .nth_stride_mut(centroid_id)
-                            .chunks_exact_mut(LANES)
-                            .zip(s.chunks_exact(LANES).map(|i| Simd::from_slice(i)))
-                            .for_each(|(c, s)| {
-                                let c_simd = Simd::from_slice(c);
-                                let result = c_simd + s;
-                                c.copy_from_slice(result.as_array());
-                            });
-                    });
+                data.p_samples.iter().for_each(|sb| {
+                    sb.chunks_exact_stride()
+                        .zip(assignments.iter().cloned())
+                        .for_each(|(s, centroid_id)| {
+                            new_centroids
+                                .nth_stride_mut(centroid_id)
+                                .chunks_exact_mut(LANES)
+                                .zip(s.chunks_exact(LANES).map(|i| Simd::from_slice(i)))
+                                .for_each(|(c, s)| {
+                                    let c_simd = Simd::from_slice(c);
+                                    let result = c_simd + s;
+                                    c.copy_from_slice(result.as_array());
+                                });
+                        });
+                });
             });
             s.spawn(|_| {
                 new_distsum = centroid_distances.iter().cloned().sum();
@@ -83,9 +85,16 @@ where
                     new_centroids
                         .bfr
                         .iter_mut()
-                        .skip(prev_centroid_id * data.p_samples.stride)
-                        .take(data.p_samples.stride)
-                        .zip(data.p_samples.bfr.iter().skip(sample_id * data.p_samples.stride).cloned())
+                        .skip(prev_centroid_id * data.p_samples[0].stride)
+                        .take(data.p_samples[0].stride)
+                        .zip(
+                            data.p_samples
+                                .iter()
+                                .map(|sb| sb.bfr.iter())
+                                .flatten()
+                                .skip(sample_id * data.p_samples[0].stride)
+                                .cloned(),
+                        )
                         .for_each(|(cv, sv)| {
                             *cv -= sv;
                         });
@@ -93,9 +102,16 @@ where
                     new_centroids
                         .bfr
                         .iter_mut()
-                        .skip(i * data.p_samples.stride)
-                        .take(data.p_samples.stride)
-                        .zip(data.p_samples.bfr.iter().skip(sample_id * data.p_samples.stride).cloned())
+                        .skip(i * data.p_samples[0].stride)
+                        .take(data.p_samples[0].stride)
+                        .zip(
+                            data.p_samples
+                                .iter()
+                                .map(|x| x.bfr.iter())
+                                .flatten()
+                                .skip(sample_id * data.p_samples[0].stride)
+                                .cloned(),
+                        )
                         .for_each(|(cv, sv)| {
                             *cv = sv;
                         });

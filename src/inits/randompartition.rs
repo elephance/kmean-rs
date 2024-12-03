@@ -2,6 +2,7 @@ use crate::api::DistanceFunction;
 use crate::memory::*;
 use crate::{KMeans, KMeansConfig, KMeansState};
 use rand::prelude::*;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::simd::{LaneCount, Simd, SupportedLaneCount};
 
 #[inline(always)]
@@ -19,16 +20,16 @@ where
         *a = config.rnd.borrow_mut().gen_range(0..k);
         centroid_frequency[*a] += 1;
     });
-    kmean
-        .p_samples
-        .chunks_exact_stride()
-        .zip(assignments.iter().cloned())
-        .for_each(|(sample, assignment)| {
-            centroids
-                .bfr
-                .iter_mut()
-                .skip(centroids.stride * assignment)
-                .zip(sample.iter().cloned())
-                .for_each(|(cv, sv)| *cv += sv / T::from(centroid_frequency[assignment]).unwrap());
-        });
+    kmean.p_samples.iter().for_each(|sb| {
+        sb.chunks_exact_stride()
+            .zip(assignments.iter().cloned())
+            .for_each(|(sample, assignment)| {
+                centroids
+                    .bfr
+                    .iter_mut()
+                    .skip(centroids.stride * assignment)
+                    .zip(sample.iter().cloned())
+                    .for_each(|(cv, sv)| *cv += sv / T::from(centroid_frequency[assignment]).unwrap());
+            });
+    });
 }
