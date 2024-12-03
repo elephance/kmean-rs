@@ -1,5 +1,5 @@
 mod lloyd;
-mod minibatch;
+//mod minibatch;
 
 pub(crate) use lloyd::Lloyd;
-pub(crate) use minibatch::Minibatch;
+//pub(crate) use minibatch::Minibatch;
