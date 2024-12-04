@@ -1,7 +1,9 @@
 use crate::api::DistanceFunction;
 use crate::memory::*;
 use crate::{KMeans, KMeansConfig, KMeansState};
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::ParallelSliceMut;
+use rayon::slice::ParallelSlice;
 use std::simd::{LaneCount, Simd, SupportedLaneCount};
 
 pub(crate) struct Lloyd<T, const LANES: usize, D>
@@ -26,6 +28,7 @@ where
         let mut used_centroids_cnt = 0;
         let mut new_centroids = StrideBuffer::new::<LANES>(state.centroids.centroid_cnt, state.centroids.centroid_dim);
         let mut new_distsum = T::zero();
+        let count_per = data.p_samples[0].bfr.len() / data.p_samples[0].stride;
 
         let (centroid_frequency, assignments, centroid_distances) =
             (&mut state.centroid_frequency, &state.assignments, &state.centroid_distances);
@@ -34,21 +37,26 @@ where
                 used_centroids_cnt = data.update_cluster_frequencies(assignments, centroid_frequency);
             });
             s.spawn(|_| {
-                data.p_samples.iter().for_each(|sb| {
-                    sb.chunks_exact_stride()
-                        .zip(assignments.iter().cloned())
-                        .for_each(|(s, centroid_id)| {
-                            new_centroids
-                                .nth_stride_mut(centroid_id)
-                                .chunks_exact_mut(LANES)
-                                .zip(s.chunks_exact(LANES).map(|i| Simd::from_slice(i)))
-                                .for_each(|(c, s)| {
-                                    let c_simd = Simd::from_slice(c);
-                                    let result = c_simd + s;
-                                    c.copy_from_slice(result.as_array());
-                                });
-                        });
-                });
+                //let asgn = assignments.par_chunks(count_per);
+                //data.p_samples.par_iter().zip(asgn).for_each(|(sb, asgn)| {
+                data.p_samples
+                    .iter()
+                    .map(|sb| sb.chunks_exact_stride())
+                    .flatten()
+                    //data.p_samples.iter().for_each(|sb| {
+                    //sb.chunks_exact_stride()
+                    .zip(assignments.iter().cloned())
+                    .for_each(|(s, centroid_id)| {
+                        new_centroids
+                            .nth_stride_mut(centroid_id)
+                            .chunks_exact_mut(LANES)
+                            .zip(s.chunks_exact(LANES).map(|i| Simd::from_slice(i)))
+                            .for_each(|(c, s)| {
+                                let c_simd = Simd::from_slice(c);
+                                let result = c_simd + s;
+                                c.copy_from_slice(result.as_array());
+                            });
+                    });
             });
             s.spawn(|_| {
                 new_distsum = centroid_distances.iter().cloned().sum();

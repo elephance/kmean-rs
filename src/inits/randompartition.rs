@@ -20,9 +20,10 @@ where
         *a = config.rnd.borrow_mut().gen_range(0..k);
         centroid_frequency[*a] += 1;
     });
+    let mut offset = 0;
     kmean.p_samples.iter().for_each(|sb| {
         sb.chunks_exact_stride()
-            .zip(assignments.iter().cloned())
+            .zip(assignments.iter().skip(offset).cloned())
             .for_each(|(sample, assignment)| {
                 centroids
                     .bfr
@@ -31,5 +32,6 @@ where
                     .zip(sample.iter().cloned())
                     .for_each(|(cv, sv)| *cv += sv / T::from(centroid_frequency[assignment]).unwrap());
             });
+        offset += sb.bfr.len() / sb.stride;
     });
 }

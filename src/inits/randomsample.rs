@@ -15,15 +15,17 @@ where
     Simd<T, LANES>: SupportedSimdArray<T, LANES>,
     D: DistanceFunction<T, LANES>,
 {
-    kmean.p_samples.iter().for_each(|sb| {
-        sb.chunks_exact_stride()
-            .choose_multiple(config.rnd.borrow_mut().deref_mut(), max(state.k / kmean.p_samples.len(), 1))
-            .iter()
-            .cloned()
-            .enumerate()
-            .for_each(|(ci, c)| {
-                // Copy randomly chosen centroids into state.centroids
-                state.centroids.set_nth_from_iter(ci, c.iter().cloned());
-            });
-    });
+    kmean
+        .p_samples
+        .iter()
+        .map(|sb| sb.chunks_exact_stride())
+        .flatten()
+        .choose_multiple(config.rnd.borrow_mut().deref_mut(), state.k)
+        .iter()
+        .cloned()
+        .enumerate()
+        .for_each(|(ci, c)| {
+            // Copy randomly chosen centroids into state.centroids
+            state.centroids.set_nth_from_iter(ci, c.iter().cloned());
+        });
 }

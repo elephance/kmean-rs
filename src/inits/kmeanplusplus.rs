@@ -17,6 +17,7 @@ where
     {
         // Randomly select first centroid
         let first_idx = config.rnd.borrow_mut().gen_range(0..kmean.sample_cnt);
+        let it = kmean.p_samples.iter().map(|x| x.iter()).flatten().collect::<Vec<_>>();
         state.centroids.set_nth_from_iter(
             0,
             kmean
