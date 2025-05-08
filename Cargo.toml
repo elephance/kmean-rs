@@ -33,13 +33,9 @@ path = "examples/minibatch.rs"
 [[example]]
 name = "status_events"
 path = "examples/status_events.rs"
-<<<<<<< HEAD
-
 
 [profile.profiling]
 inherits = "release"
 debug = "full"
 strip = "none"
 incremental = false
-=======
->>>>>>> 0a04323 (Working on memos port.)
