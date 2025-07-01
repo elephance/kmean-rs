@@ -389,7 +389,6 @@ where
     /// println!("Cluster-Assignments: {:?}", result.assignments);
     /// println!("Error: {}", result.distsum);
     /// ```
-    /*
     pub fn kmeans_minibatch<F>(&self, batch_size: usize, k: usize, max_iter: usize, init: F, config: &KMeansConfig<'_, T>) -> KMeansState<T>
     where
         for<'c> F: FnOnce(&KMeans<T, LANES, D>, &mut KMeansState<T>, &KMeansConfig<'c, T>),
@@ -397,9 +396,9 @@ where
         LaneCount<LANES>: SupportedLaneCount,
         Simd<T, LANES>: SupportedSimdArray<T, LANES>,
     {
-        crate::variants::Minibatch::calculate(self, batch_size, k, max_iter, init, config)
+        todo!()
+        //crate::variants::Minibatch::calculate(self, batch_size, k, max_iter, init, config)
     }
-    */
 
     /// K-Means++ initialization method, as implemented in Matlab
     ///
@@ -503,7 +502,7 @@ mod tests {
             .centroids
             .bfr
             .iter_mut()
-            .zip(kmean.p_samples.bfr.iter())
+            .zip(kmean.p_samples.iter().map(|sample| sample.bfr.iter()).flatten())
             .for_each(|(c, s)| *c = *s);
 
         // calculate distances using method that (hopefully) works.
@@ -511,7 +510,9 @@ mod tests {
         let mut should_centroid_distances = state.centroid_distances.clone();
         kmean
             .p_samples
-            .chunks_exact_stride()
+            .iter()
+            .map(|sample| sample.chunks_exact_stride())
+            .flatten()
             .zip(should_assignments.iter_mut())
             .zip(should_centroid_distances.iter_mut())
             .for_each(|((s, assignment), centroid_dist)| {
@@ -578,7 +579,7 @@ mod tests {
             .centroids
             .bfr
             .iter_mut()
-            .zip(kmean.p_samples.bfr.iter())
+            .zip(kmean.p_samples.iter().map(|s| s.bfr.iter()).flatten())
             .for_each(|(c, s)| *c = *s);
 
         b.iter(|| {

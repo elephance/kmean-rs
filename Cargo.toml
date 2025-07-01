@@ -27,10 +27,6 @@ name = "lloyd"
 path = "examples/lloyd.rs"
 
 [[example]]
-name = "minibatch"
-path = "examples/minibatch.rs"
-
-[[example]]
 name = "status_events"
 path = "examples/status_events.rs"
 

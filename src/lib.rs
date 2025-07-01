@@ -149,6 +149,7 @@ mod tests {
         b.iter(|| kmean.kmeans_lloyd(k, max_iter, KMeans::init_kmeanplusplus, &conf));
     }
 
+    /*
     #[bench]
     fn complete_benchmark_minibatch_small_f64x8(b: &mut Bencher) { complete_benchmark_minibatch::<f64, 8>(b, 30, 200, 2000, 100, 32); }
     #[bench]
@@ -180,4 +181,5 @@ mod tests {
         let conf = KMeansConfig::build().random_generator(rnd).build();
         b.iter(|| kmean.kmeans_minibatch(batch_size, k, max_iter, KMeans::init_random_sample, &conf));
     }
+    */
 }
