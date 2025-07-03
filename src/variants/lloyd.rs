@@ -1,9 +1,9 @@
 use crate::api::DistanceFunction;
 use crate::memory::*;
 use crate::{KMeans, KMeansConfig, KMeansState};
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rayon::prelude::ParallelSliceMut;
-use rayon::slice::ParallelSlice;
+//use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+//use rayon::prelude::ParallelSliceMut;
+//use rayon::slice::ParallelSlice;
 use std::simd::{LaneCount, Simd, SupportedLaneCount};
 
 pub(crate) struct Lloyd<T, const LANES: usize, D>
@@ -28,7 +28,7 @@ where
         let mut used_centroids_cnt = 0;
         let mut new_centroids = StrideBuffer::new::<LANES>(state.centroids.centroid_cnt, state.centroids.centroid_dim);
         let mut new_distsum = T::zero();
-        let count_per = data.p_samples[0].bfr.len() / data.p_samples[0].stride;
+        //let count_per = data.p_samples[0].bfr.len() / data.p_samples[0].stride;
 
         let (centroid_frequency, assignments, centroid_distances) =
             (&mut state.centroid_frequency, &state.assignments, &state.centroid_distances);

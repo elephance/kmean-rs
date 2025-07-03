@@ -389,14 +389,16 @@ where
     /// println!("Cluster-Assignments: {:?}", result.assignments);
     /// println!("Error: {}", result.distsum);
     /// ```
-    pub fn kmeans_minibatch<F>(&self, batch_size: usize, k: usize, max_iter: usize, init: F, config: &KMeansConfig<'_, T>) -> KMeansState<T>
+    pub fn kmeans_minibatch<F>(
+        &self, _batch_size: usize, _k: usize, _max_iter: usize, _init: F, _config: &KMeansConfig<'_, T>,
+    ) -> KMeansState<T>
     where
         for<'c> F: FnOnce(&KMeans<T, LANES, D>, &mut KMeansState<T>, &KMeansConfig<'c, T>),
         T: Primitive,
         LaneCount<LANES>: SupportedLaneCount,
         Simd<T, LANES>: SupportedSimdArray<T, LANES>,
     {
-        todo!()
+        panic!("currently broken :(");
         //crate::variants::Minibatch::calculate(self, batch_size, k, max_iter, init, config)
     }
 

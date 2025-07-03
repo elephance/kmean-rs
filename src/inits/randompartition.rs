@@ -2,7 +2,7 @@ use crate::api::DistanceFunction;
 use crate::memory::*;
 use crate::{KMeans, KMeansConfig, KMeansState};
 use rand::prelude::*;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+//use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::simd::{LaneCount, Simd, SupportedLaneCount};
 
 #[inline(always)]

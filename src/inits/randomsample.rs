@@ -2,8 +2,8 @@ use crate::api::DistanceFunction;
 use crate::memory::*;
 use crate::{KMeans, KMeansConfig, KMeansState};
 use rand::prelude::*;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::cmp::max;
+//use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+//use std::cmp::max;
 use std::ops::DerefMut;
 use std::simd::{LaneCount, Simd, SupportedLaneCount};
 
